@@ -19,11 +19,12 @@ const MAPS = [
 const page = ref('home')
 const menuOpen = ref(false)
 const toiletCount = ref(0)
+const displayedCount = ref(0)
 const adventureFromMorning = ref(false)
 const adventureCelebration = ref(false)
 const adventureBusy = ref(false)
-const mapIndex = computed(() => Math.floor(toiletCount.value / 10))
-const mapProgress = computed(() => toiletCount.value % 10)
+const mapIndex = computed(() => Math.floor(displayedCount.value / 10))
+const mapProgress = computed(() => displayedCount.value % 10)
 const map = computed(() => MAPS[mapIndex.value % MAPS.length])
 const pathCells = [
   { x: 9, y: 73 }, { x: 27, y: 75 }, { x: 45, y: 75 },
@@ -37,6 +38,7 @@ function loadToilet() {
     const value = JSON.parse(localStorage.getItem(TOILET_KEY) || 'null')
     toiletCount.value = Number.isSafeInteger(value?.count) && value.count >= 0 ? value.count : 0
   } catch { toiletCount.value = 0 }
+  displayedCount.value = toiletCount.value
 }
 function saveToilet() {
   try { localStorage.setItem(TOILET_KEY, JSON.stringify({ count: toiletCount.value })) } catch { /* storage unavailable */ }
@@ -47,6 +49,7 @@ function goTo(destination) {
   adventureBusy.value = false
   adventureCelebration.value = false
   adventureFromMorning.value = false
+  displayedCount.value = toiletCount.value
   menuOpen.value = false
   page.value = destination
 }
@@ -62,8 +65,10 @@ function addAdventureSticker() {
   saveToilet()
   const finished = toiletCount.value % 10 === 0
   if (finished) adventureCelebration.value = true
+  else displayedCount.value = toiletCount.value
   adventureTimer = setTimeout(() => {
     adventureCelebration.value = false
+    displayedCount.value = toiletCount.value
     adventureBusy.value = false
     if (adventureFromMorning.value) {
       adventureFromMorning.value = false
@@ -75,6 +80,7 @@ function undoToilet() {
   if (adventureBusy.value || toiletCount.value === 0) return
   if (!window.confirm('さいごのシールを 1まい もどしますか？')) return
   toiletCount.value -= 1
+  displayedCount.value = toiletCount.value
   saveToilet()
 }
 
