@@ -26,3 +26,26 @@
 
 .morning-notice{position:fixed;inset:0;z-index:20;display:grid;place-items:center;text-align:center;background:#fff2c9eb;color:#cb5790;font-size:clamp(30px,5vw,60px);font-weight:900;pointer-events:none;animation:pop .35s ease-out}
 .history-panel{min-height:230px;text-align:center;padding:8px}.history-panel h2{color:#c66396}.history-list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;max-height:125px;overflow-y:auto}.history-list button,.history-back{border:2px solid #edc4da;border-radius:14px;background:#fff0f7;color:#8b5474;padding:9px 15px;font-weight:800;cursor:pointer}.history-preview{font-size:clamp(25px,4vw,50px);margin:12px 0}.history-preview p{font-size:16px;font-weight:900}.history-back{background:#e1f7e9;border-color:#a4dcb6}
+
+
+/* Dekita tree: a single, endlessly growing reward tree */
+.tree-page{background:linear-gradient(150deg,#e5f7ef,#fff6dc)}
+.tree-board{max-width:760px;border-color:#bce4bf;box-shadow:0 12px 0 #a4d3ae;text-align:center}
+.tree-header h1{color:#5a986c}
+.tree-scene{height:clamp(240px,43vh,400px);border:4px solid #c7e7c4;border-radius:28px;background:linear-gradient(#d8f2ff 0%,#f0fbec 78%);position:relative;overflow:hidden;margin:12px auto 8px;max-width:660px}
+.tree-ground{position:absolute;bottom:-15px;left:-10%;width:120%;height:23%;border-radius:50% 50% 0 0;background:#c2e5a5}
+.tree-sun{position:absolute;right:12%;top:7%;font-size:38px}.tree-cloud{position:absolute;font-size:40px;opacity:.75}.tree-cloud-a{left:10%;top:11%}.tree-cloud-b{right:26%;top:26%;font-size:29px}
+.tree-art{position:absolute;height:100%;width:min(100%,390px);left:50%;bottom:0;transform:translateX(-50%);overflow:visible}
+.tree-shape{transform-origin:center;transition:transform .55s cubic-bezier(.2,.9,.2,1)}
+.tree-pop{animation:treeBounce .65s ease-out}
+.tree-comparison{position:absolute;right:5%;bottom:17%;display:flex;flex-direction:column;align-items:center;gap:2px;background:#ffffffd9;border:2px solid #c7e7c4;border-radius:18px;padding:6px 10px;color:#598565;font-weight:800}
+.tree-comparison span{font-size:clamp(25px,4vw,42px)}.tree-comparison small{font-size:12px}
+.tree-sparkle{position:absolute;top:20%;left:50%;transform:translateX(-50%);font-size:clamp(23px,4vw,38px);font-weight:900;color:#e6a343;text-shadow:0 2px white;white-space:nowrap;pointer-events:none}
+.tree-stats{display:flex;flex-direction:column;align-items:center;gap:1px;color:#588467}.tree-stats strong{font-size:clamp(32px,5vw,54px);line-height:1.15}.tree-stats span{font-size:14px;font-weight:800}.tree-stats p{margin:5px 0 11px;font-size:clamp(13px,2vw,18px);font-weight:800}
+.tree-grow-button{display:block;width:min(100%,420px);min-height:78px;margin:0 auto;background:linear-gradient(180deg,#ffdd8e,#ffbd75);border:4px solid #f2a763;border-radius:27px;box-shadow:0 6px 0 #d99761;color:#895a41;font-size:clamp(26px,4vw,38px);font-weight:900;cursor:pointer;touch-action:manipulation}
+.tree-grow-button:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #d99761}.tree-grow-button:disabled{opacity:.85}.tree-grow-button:focus-visible{outline:4px solid #8864cc;outline-offset:3px}
+.tree-undo{margin-top:13px;padding:8px;background:transparent;border:0;text-decoration:underline;color:#978a91;font-size:12px;cursor:pointer}
+.tree-choice{background:#e8f7dc;border-color:#b5dba7}
+@keyframes treeBounce{0%{transform:translateX(-50%) scale(.94)}55%{transform:translateX(-50%) scale(1.045)}100%{transform:translateX(-50%) scale(1)}}
+@media(max-width:680px){.home-choices{grid-template-columns:1fr;gap:9px}.home-choice{min-height:112px;flex-direction:row;gap:16px;border-radius:20px}.home-choice span{font-size:43px}.home-choice strong{font-size:22px}.tree-scene{height:clamp(240px,43vh,330px)}.tree-grow-button{min-height:70px}}
+@media(max-height:600px) and (orientation:landscape){.home-choices{grid-template-columns:repeat(3,minmax(0,1fr))}.home-choice{flex-direction:column;min-height:130px}.tree-scene{height:clamp(175px,45vh,250px)}.tree-grow-button{min-height:58px}.tree-stats strong{font-size:28px}}
