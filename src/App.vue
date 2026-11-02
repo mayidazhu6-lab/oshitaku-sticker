@@ -91,6 +91,49 @@ function undoToilet() {
   saveToilet()
 }
 
+
+const TREE_KEY = 'oshitaku-dekita-tree-v01'
+const treeCount = ref(0)
+const treeGrowing = ref(false)
+const treeMilestones = [
+  { height: 1, icon: '🧒', label: 'こども' },
+  { height: 2, icon: '🚪', label: 'ドア' },
+  { height: 5, icon: '🦒', label: 'キリン' },
+  { height: 10, icon: '🏠', label: 'おうち' },
+  { height: 30, icon: '🏢', label: 'ビル' },
+  { height: 100, icon: '🏙️', label: 'たかいビル' },
+  { height: 333, icon: '🗼', label: 'とうきょうタワー' },
+  { height: 634, icon: '🗼', label: 'スカイツリー' },
+  { height: 10000, icon: '✈️', label: 'ひこうき' },
+]
+const treeNearby = computed(() => [...treeMilestones].reverse().find(item => treeCount.value >= item.height) || null)
+const treeNext = computed(() => treeMilestones.find(item => treeCount.value < item.height) || null)
+const treeSize = computed(() => Math.min(1.16, 0.48 + Math.log2(treeCount.value + 1) * 0.115))
+let treeTimer
+function loadTree() {
+  try {
+    const value = JSON.parse(localStorage.getItem(TREE_KEY) || 'null')
+    treeCount.value = Number.isSafeInteger(value?.count) && value.count >= 0 ? value.count : 0
+  } catch { treeCount.value = 0 }
+}
+function saveTree() {
+  try { localStorage.setItem(TREE_KEY, JSON.stringify({ count: treeCount.value })) } catch { /* storage unavailable */ }
+}
+function growTree() {
+  if (treeGrowing.value || treeCount.value >= Number.MAX_SAFE_INTEGER) return
+  treeCount.value += 1
+  saveTree()
+  treeGrowing.value = true
+  clearTimeout(treeTimer)
+  treeTimer = setTimeout(() => { treeGrowing.value = false }, 650)
+}
+function undoTree() {
+  if (treeGrowing.value || treeCount.value === 0) return
+  if (!window.confirm('さいごの「できた！」を 1かい もどしますか？')) return
+  treeCount.value -= 1
+  saveTree()
+}
+
 const dayKey = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -170,12 +213,14 @@ function checkDay() { ensureToday() }
 onMounted(() => {
   loadToday()
   loadToilet()
+  loadTree()
   dayTimer = setInterval(checkDay, 60_000)
   window.addEventListener('focus', checkDay)
   document.addEventListener('visibilitychange', checkDay)
 })
 onUnmounted(() => {
   clearInterval(dayTimer)
+  clearTimeout(treeTimer)
   clearTimeout(adventureTimer)
   clearTimeout(transitionTimer)
   clearTimeout(celebrationTimer)
@@ -186,19 +231,61 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="page" :class="{ 'adventure-page': page === 'adventure' }">
+  <main class="page" :class="{ 'adventure-page': page === 'adventure', 'tree-page': page === 'tree' }">
     <button v-if="page !== 'home'" class="menu-toggle" type="button" aria-label="メニューをひらく" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
     <nav v-if="menuOpen && page !== 'home'" class="mode-menu" aria-label="モードきりかえ">
       <button type="button" @click="goTo('home')">🏠 ホーム</button>
       <button type="button" @click="goTo('morning')">☀️ あさのおしたく</button>
       <button type="button" @click="goTo('adventure')">🗺️ トイレのぼうけん</button>
+      <button type="button" @click="goTo('tree')">🌳 できたのき</button>
     </nav>
     <section v-if="page === 'home'" class="board home-board">
       <header class="header"><div class="eyebrow">✨ おしたくシール ✨</div><h1>きょうは なにをする？</h1></header>
       <div class="home-choices">
         <button class="home-choice morning-choice" type="button" @click="goTo('morning')"><span>☀️👗</span><strong>あさのおしたく</strong></button>
         <button class="home-choice adventure-choice" type="button" @click="goTo('adventure')"><span>🚽🗺️</span><strong>トイレのぼうけん</strong></button>
+        <button class="home-choice tree-choice" type="button" @click="goTo('tree')"><span>🌱🌳</span><strong>できたのき</strong></button>
       </div>
+    </section>
+
+    <section v-if="page === 'tree'" class="board tree-board">
+      <header class="header tree-header">
+        <div class="eyebrow">🌱 ちいさな できたが おおきな きに 🌱</div>
+        <h1>🌳 できたのき</h1>
+      </header>
+      <div class="tree-scene" role="img" :aria-label="treeCount === 0 ? 'ふたばが はえているよ' : treeCount + 'メートルに そだった き'">
+        <div class="tree-sun" aria-hidden="true">☀️</div>
+        <div class="tree-cloud tree-cloud-a" aria-hidden="true">☁️</div>
+        <div class="tree-cloud tree-cloud-b" aria-hidden="true">☁️</div>
+        <div class="tree-ground" aria-hidden="true"></div>
+        <svg class="tree-art" :class="{ 'tree-pop': treeGrowing }" viewBox="0 0 320 290" aria-hidden="true">
+          <g v-if="treeCount === 0">
+            <path d="M160 263 Q159 234 160 215" fill="none" stroke="#67A764" stroke-width="9" stroke-linecap="round"/>
+            <ellipse cx="139" cy="219" rx="27" ry="13" fill="#86CB83" transform="rotate(25 139 219)"/>
+            <ellipse cx="182" cy="207" rx="27" ry="13" fill="#74BB72" transform="rotate(-28 182 207)"/>
+          </g>
+          <g v-else :style="{ transform: 'translateY(265px) scale(' + treeSize + ') translateY(-265px)' }" class="tree-shape">
+            <path d="M144 266 Q149 208 143 160 L176 160 Q168 210 177 266 Z" fill="#A97952"/>
+            <path d="M157 221 Q146 185 120 169 M166 201 Q185 175 205 166" fill="none" stroke="#A97952" stroke-width="15" stroke-linecap="round"/>
+            <circle cx="159" cy="121" r="68" fill="#77BD78"/>
+            <circle cx="115" cy="155" r="47" fill="#8FCE85"/>
+            <circle cx="206" cy="153" r="48" fill="#81C783"/>
+            <circle cx="145" cy="90" r="48" fill="#9AD990"/>
+            <circle cx="192" cy="105" r="45" fill="#91D18A"/>
+            <circle cx="131" cy="134" r="23" fill="#A5DD99" opacity=".7"/>
+          </g>
+        </svg>
+        <div v-if="treeNearby" class="tree-comparison" aria-hidden="true"><span>{{ treeNearby.icon }}</span><small>{{ treeNearby.label }}</small></div>
+        <div v-if="treeGrowing" class="tree-sparkle" aria-hidden="true">✨ ぐんっ！ ✨</div>
+      </div>
+      <div class="tree-stats" aria-live="polite">
+        <strong>{{ treeCount === 0 ? '0 m' : treeCount.toLocaleString('ja-JP') + ' m' }}</strong>
+        <span>{{ treeCount === 0 ? 'まだ ふたばだよ！' : 'きの たかさ' }}</span>
+        <p v-if="treeNext">つぎは {{ treeNext.icon }} {{ treeNext.label }}！ あと {{ (treeNext.height - treeCount).toLocaleString('ja-JP') }} m</p>
+        <p v-else>そらの ずっと うえまで のびていくよ！</p>
+      </div>
+      <button type="button" class="tree-grow-button" :disabled="treeGrowing" @click="growTree">⭐ できた！ ⭐</button>
+      <button type="button" class="tree-undo" :disabled="treeGrowing || treeCount === 0" @click="undoTree">おうちのひと：1かい もどす</button>
     </section>
     <section v-if="page === 'adventure'" class="board adventure-board" :class="'map-' + map.color">
       <header class="header">
