@@ -28,6 +28,7 @@ const adventureCelebration = ref(false)
 const adventureBusy = ref(false)
 const mapIndex = computed(() => Math.floor(displayedCount.value / 10))
 const mapProgress = computed(() => displayedCount.value % 10)
+const isCompletingMap = computed(() => adventureCelebration.value && toiletCount.value % 10 === 0)
 const map = computed(() => MAPS[mapIndex.value % MAPS.length])
 const pathCells = [
   { x: 9, y: 73 }, { x: 27, y: 75 }, { x: 45, y: 75 },
@@ -65,7 +66,7 @@ function enterAdventureFromMorning() {
   menuOpen.value = false
 }
 function addAdventureSticker() {
-  if (adventureBusy.value || adventureCelebration.value) return
+  if (adventureBusy.value || adventureCelebration.value || showHistory.value) return
   adventureBusy.value = true
   toiletCount.value += 1
   saveToilet()
@@ -205,19 +206,19 @@ onUnmounted(() => {
         <h1>{{ map.icon }} {{ map.name }}</h1>
         <p>だい {{ mapIndex + 1 }} マップ ・ {{ mapProgress }} / 10 まい</p>
       </header>
-      <div v-if="showHistory" class="history-panel"><h2>📖 ぼうけんのきろく</h2><p>これまでの マップを みてみよう！</p><div class="history-list"><button v-for="n in Math.floor(toiletCount / 10)" :key="n" type="button" @click="historyMap = n - 1">{{ MAPS[(n - 1) % MAPS.length].icon }} {{ n }} まいめの マップ</button></div><div v-if="historyMap < Math.floor(toiletCount / 10)" class="history-preview">{{ MAPS[historyMap % MAPS.length].scene }}<p>⭐ {{ historyMap + 1 }} ばんめの マップ クリア！</p></div><button type="button" class="history-back" @click="showHistory = false">ぼうけんに もどる</button></div>
+      <div v-if="showHistory" class="history-panel"><h2>📖 ぼうけんのきろく</h2><p>これまでの マップを みてみよう！</p><div class="history-list"><button v-for="n in Math.floor(toiletCount / 10)" :key="n" type="button" @click="historyMap = n - 1">{{ MAPS[(n - 1) % MAPS.length].icon }} {{ n }} ばんめの マップ</button></div><div v-if="historyMap < Math.floor(toiletCount / 10)" class="history-preview">{{ MAPS[historyMap % MAPS.length].scene }}<p>⭐ {{ historyMap + 1 }} ばんめの マップ クリア！</p></div><button type="button" class="history-back" @click="showHistory = false">ぼうけんに もどる</button></div>
       <div v-else class="adventure-map">
         <div class="map-scenery" aria-hidden="true">{{ map.scene }}</div>
         <svg class="map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <polyline :points="pathCells.map(p => p.x + ',' + p.y).join(' ')" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
         </svg>
         <button v-for="(cell, index) in pathCells" :key="index" type="button" class="map-cell"
-          :class="{ filled: index < mapProgress, next: index === mapProgress }"
+          :class="{ filled: index < mapProgress || (isCompletingMap && index === 9), next: index === mapProgress && !isCompletingMap }"
           :style="{ left: cell.x + '%', top: cell.y + '%' }"
           :disabled="index !== mapProgress || adventureBusy"
-          :aria-label="index < mapProgress ? (index + 1) + 'まい はったよ' : index === mapProgress ? 'つぎのシールをはる' : (index + 1) + 'ばん'"
+          :aria-label="index < mapProgress || (isCompletingMap && index === 9) ? (index + 1) + 'まい はったよ' : index === mapProgress ? 'つぎのシールをはる' : (index + 1) + 'ばん'"
           @click="addAdventureSticker">
-          {{ index < mapProgress ? STICKERS[(mapIndex * 10 + index) % STICKERS.length] : index === mapProgress ? '＋' : index + 1 }}
+          {{ index < mapProgress || (isCompletingMap && index === 9) ? STICKERS[(mapIndex * 10 + index) % STICKERS.length] : index === mapProgress ? '＋' : index + 1 }}
         </button>
       </div>
       <footer v-if="!showHistory" class="adventure-footer">
