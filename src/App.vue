@@ -8,6 +8,76 @@ const TASKS = [
 ]
 const STICKERS = ['🌸', '💖', '⭐', '🦄', '🐰', '🌈', '🎀', '🧸', '🍓', '🦋']
 const KEY = 'oshitaku-sticker-v01'
+const TOILET_KEY = 'oshitaku-toilet-adventure-v01'
+const MAPS = [
+  { name: 'おはなばたけ', icon: '🌷', scene: '🌼 🌸 🦋 🌻 🌷', color: 'flower' },
+  { name: 'どうぶつのもり', icon: '🌳', scene: '🌲 🐰 🍄 🦊 🌿', color: 'forest' },
+  { name: 'にじのそら', icon: '🌈', scene: '☁️ ⭐ 🌈 🕊️ ☀️', color: 'sky' },
+  { name: 'おしろのこみち', icon: '🏰', scene: '🌹 🏰 💐 🦄 ✨', color: 'castle' },
+  { name: 'うみのぼうけん', icon: '🐬', scene: '🐚 🐠 🐬 🪸 🐢', color: 'sea' },
+]
+const page = ref('home')
+const menuOpen = ref(false)
+const toiletCount = ref(0)
+const adventureFromMorning = ref(false)
+const adventureCelebration = ref(false)
+const adventureBusy = ref(false)
+const mapIndex = computed(() => Math.floor(toiletCount.value / 10))
+const mapProgress = computed(() => toiletCount.value % 10)
+const map = computed(() => MAPS[mapIndex.value % MAPS.length])
+const pathCells = [
+  { x: 9, y: 73 }, { x: 27, y: 75 }, { x: 45, y: 75 },
+  { x: 64, y: 75 }, { x: 82, y: 68 }, { x: 83, y: 40 },
+  { x: 65, y: 27 }, { x: 47, y: 27 }, { x: 29, y: 27 }, { x: 11, y: 27 },
+]
+let adventureTimer
+let transitionTimer
+function loadToilet() {
+  try {
+    const value = JSON.parse(localStorage.getItem(TOILET_KEY) || 'null')
+    toiletCount.value = Number.isSafeInteger(value?.count) && value.count >= 0 ? value.count : 0
+  } catch { toiletCount.value = 0 }
+}
+function saveToilet() {
+  try { localStorage.setItem(TOILET_KEY, JSON.stringify({ count: toiletCount.value })) } catch { /* storage unavailable */ }
+}
+function goTo(destination) {
+  clearTimeout(transitionTimer)
+  clearTimeout(adventureTimer)
+  adventureBusy.value = false
+  adventureCelebration.value = false
+  adventureFromMorning.value = false
+  menuOpen.value = false
+  page.value = destination
+}
+function enterAdventureFromMorning() {
+  adventureFromMorning.value = true
+  page.value = 'adventure'
+  menuOpen.value = false
+}
+function addAdventureSticker() {
+  if (adventureBusy.value || adventureCelebration.value) return
+  adventureBusy.value = true
+  toiletCount.value += 1
+  saveToilet()
+  const finished = toiletCount.value % 10 === 0
+  if (finished) adventureCelebration.value = true
+  adventureTimer = setTimeout(() => {
+    adventureCelebration.value = false
+    adventureBusy.value = false
+    if (adventureFromMorning.value) {
+      adventureFromMorning.value = false
+      page.value = 'morning'
+    }
+  }, finished ? 2700 : 900)
+}
+function undoToilet() {
+  if (adventureBusy.value || toiletCount.value === 0) return
+  if (!window.confirm('さいごのシールを 1まい もどしますか？')) return
+  toiletCount.value -= 1
+  saveToilet()
+}
+
 const dayKey = () => {
   const now = new Date()
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -65,6 +135,9 @@ function addSticker(id) {
   burstId.value = id
   clearTimeout(burstTimer)
   burstTimer = setTimeout(() => { burstId.value = null }, 850)
+  if (id === 'toilet' && page.value === 'morning') {
+    transitionTimer = setTimeout(enterAdventureFromMorning, 1100)
+  }
   if (allDone.value) {
     celebration.value = true
     clearTimeout(celebrationTimer)
@@ -82,12 +155,15 @@ function resetToday() {
 function checkDay() { ensureToday() }
 onMounted(() => {
   loadToday()
+  loadToilet()
   dayTimer = setInterval(checkDay, 60_000)
   window.addEventListener('focus', checkDay)
   document.addEventListener('visibilitychange', checkDay)
 })
 onUnmounted(() => {
   clearInterval(dayTimer)
+  clearTimeout(adventureTimer)
+  clearTimeout(transitionTimer)
   clearTimeout(celebrationTimer)
   clearTimeout(burstTimer)
   window.removeEventListener('focus', checkDay)
@@ -96,7 +172,50 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <main class="page">
+  <main class="page" :class="{ 'adventure-page': page === 'adventure' }">
+    <button v-if="page !== 'home'" class="menu-toggle" type="button" aria-label="メニューをひらく" :aria-expanded="menuOpen" @click="menuOpen = !menuOpen">☰</button>
+    <nav v-if="menuOpen && page !== 'home'" class="mode-menu" aria-label="モードきりかえ">
+      <button type="button" @click="goTo('home')">🏠 ホーム</button>
+      <button type="button" @click="goTo('morning')">☀️ あさのおしたく</button>
+      <button type="button" @click="goTo('adventure')">🗺️ トイレのぼうけん</button>
+    </nav>
+    <section v-if="page === 'home'" class="board home-board">
+      <header class="header"><div class="eyebrow">✨ おしたくシール ✨</div><h1>きょうは なにをする？</h1></header>
+      <div class="home-choices">
+        <button class="home-choice morning-choice" type="button" @click="goTo('morning')"><span>☀️👗</span><strong>あさのおしたく</strong></button>
+        <button class="home-choice adventure-choice" type="button" @click="goTo('adventure')"><span>🚽🗺️</span><strong>トイレのぼうけん</strong></button>
+      </div>
+    </section>
+    <section v-if="page === 'adventure'" class="board adventure-board" :class="'map-' + map.color">
+      <header class="header">
+        <div class="eyebrow">🗺️ トイレのぼうけん 🗺️</div>
+        <h1>{{ map.icon }} {{ map.name }}</h1>
+        <p>だい {{ mapIndex + 1 }} マップ ・ {{ mapProgress }} / 10 まい</p>
+      </header>
+      <div class="adventure-map">
+        <div class="map-scenery" aria-hidden="true">{{ map.scene }}</div>
+        <svg class="map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+          <polyline :points="pathCells.map(p => p.x + ',' + p.y).join(' ')" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
+        </svg>
+        <button v-for="(cell, index) in pathCells" :key="index" type="button" class="map-cell"
+          :class="{ filled: index < mapProgress, next: index === mapProgress }"
+          :style="{ left: cell.x + '%', top: cell.y + '%' }"
+          :disabled="index !== mapProgress || adventureBusy"
+          :aria-label="index < mapProgress ? (index + 1) + 'まい はったよ' : index === mapProgress ? 'つぎのシールをはる' : (index + 1) + 'ばん'"
+          @click="addAdventureSticker">
+          {{ index < mapProgress ? STICKERS[(mapIndex * 10 + index) % STICKERS.length] : index === mapProgress ? '＋' : index + 1 }}
+        </button>
+      </div>
+      <footer class="adventure-footer">
+        <strong>⭐ ぜんぶで {{ toiletCount }} まい！</strong>
+        <span>あと {{ 10 - mapProgress }} まいで キラキラ！</span>
+        <button class="undo-toilet" type="button" @click="undoToilet" :disabled="adventureBusy || toiletCount === 0">おうちのひと：1まい もどす</button>
+      </footer>
+      <div v-if="adventureCelebration" class="adventure-overlay" role="status">
+        <div class="adventure-congrats">✨🎉✨<br>10かい たっせい！<br>やったー！<br>✨🌈✨</div>
+      </div>
+    </section>
+    <template v-if="page === 'morning'">
     <div class="decoration decoration-a" aria-hidden="true">✿</div>
     <div class="decoration decoration-b" aria-hidden="true">✦</div>
     <section class="board" aria-label="あさのおしたくシールちょう">
@@ -130,6 +249,7 @@ onUnmounted(() => {
     </section>
 
     <button class="parent-reset" type="button" @click="resetToday">おうちのひと：やりなおす</button>
-    <div v-if="celebration" class="celebration" aria-hidden="true"><span v-for="(piece, index) in confetti" :key="index" class="confetti" :style="{ left: piece.left, animationDelay: piece.delay }">{{ piece.symbol }}</span></div>
+    </template>
+    <div v-if="page === 'morning' && celebration" class="celebration" aria-hidden="true"><span v-for="(piece, index) in confetti" :key="index" class="confetti" :style="{ left: piece.left, animationDelay: piece.delay }">{{ piece.symbol }}</span></div>
   </main>
 </template>
