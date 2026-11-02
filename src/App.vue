@@ -18,6 +18,9 @@ const MAPS = [
 ]
 const page = ref('home')
 const menuOpen = ref(false)
+const showHistory = ref(false)
+const historyMap = ref(0)
+const morningNotice = ref(false)
 const toiletCount = ref(0)
 const displayedCount = ref(0)
 const adventureFromMorning = ref(false)
@@ -49,11 +52,14 @@ function goTo(destination) {
   adventureBusy.value = false
   adventureCelebration.value = false
   adventureFromMorning.value = false
+  showHistory.value = false
+  morningNotice.value = false
   displayedCount.value = toiletCount.value
   menuOpen.value = false
   page.value = destination
 }
 function enterAdventureFromMorning() {
+  morningNotice.value = false
   adventureFromMorning.value = true
   page.value = 'adventure'
   menuOpen.value = false
@@ -142,7 +148,8 @@ function addSticker(id) {
   clearTimeout(burstTimer)
   burstTimer = setTimeout(() => { burstId.value = null }, 850)
   if (id === 'toilet' && page.value === 'morning') {
-    transitionTimer = setTimeout(enterAdventureFromMorning, 1100)
+    morningNotice.value = true
+    transitionTimer = setTimeout(enterAdventureFromMorning, 1500)
   }
   if (allDone.value) {
     celebration.value = true
@@ -198,7 +205,8 @@ onUnmounted(() => {
         <h1>{{ map.icon }} {{ map.name }}</h1>
         <p>だい {{ mapIndex + 1 }} マップ ・ {{ mapProgress }} / 10 まい</p>
       </header>
-      <div class="adventure-map">
+      <div v-if="showHistory" class="history-panel"><h2>📖 ぼうけんのきろく</h2><p>これまでの マップを みてみよう！</p><div class="history-list"><button v-for="n in Math.floor(toiletCount / 10)" :key="n" type="button" @click="historyMap = n - 1">{{ MAPS[(n - 1) % MAPS.length].icon }} {{ n }} まいめの マップ</button></div><div v-if="historyMap < Math.floor(toiletCount / 10)" class="history-preview">{{ MAPS[historyMap % MAPS.length].scene }}<p>⭐ {{ historyMap + 1 }} ばんめの マップ クリア！</p></div><button type="button" class="history-back" @click="showHistory = false">ぼうけんに もどる</button></div>
+      <div v-else class="adventure-map">
         <div class="map-scenery" aria-hidden="true">{{ map.scene }}</div>
         <svg class="map-path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
           <polyline :points="pathCells.map(p => p.x + ',' + p.y).join(' ')" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 2"/>
@@ -212,9 +220,10 @@ onUnmounted(() => {
           {{ index < mapProgress ? STICKERS[(mapIndex * 10 + index) % STICKERS.length] : index === mapProgress ? '＋' : index + 1 }}
         </button>
       </div>
-      <footer class="adventure-footer">
+      <footer v-if="!showHistory" class="adventure-footer">
         <strong>⭐ ぜんぶで {{ toiletCount }} まい！</strong>
         <span>あと {{ 10 - mapProgress }} まいで キラキラ！</span>
+        <button class="undo-toilet" type="button" @click="showHistory = true">📖 ぼうけんのきろく</button>
         <button class="undo-toilet" type="button" @click="undoToilet" :disabled="adventureBusy || toiletCount === 0">おうちのひと：1まい もどす</button>
       </footer>
       <div v-if="adventureCelebration" class="adventure-overlay" role="status">
@@ -255,6 +264,7 @@ onUnmounted(() => {
     </section>
 
     <button class="parent-reset" type="button" @click="resetToday">おうちのひと：やりなおす</button>
+    <div v-if="morningNotice" class="morning-notice" role="status">✨ トイレのぼうけんにも<br>シールを はろう！ ✨</div>
     </template>
     <div v-if="page === 'morning' && celebration" class="celebration" aria-hidden="true"><span v-for="(piece, index) in confetti" :key="index" class="confetti" :style="{ left: piece.left, animationDelay: piece.delay }">{{ piece.symbol }}</span></div>
   </main>
